@@ -13,6 +13,6 @@ The original ZIP and unmodified source copy are preserved outside this repositor
 
 ## Validation status
 
-The project has not yet been run or deployed from this repository. Future branches will validate individual components and document the observed results.
+Mocked upload regression tests and in-process HTTP smoke tests run without service credentials. The CI workflow checks these tests, dependency compatibility, and Python and JavaScript syntax on Python 3.11 and 3.12. Live AWS, Pinecone, PostgreSQL integration and deployment remain unverified.
 
 I learned this project approach through Krish Naik Academy.
