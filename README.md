@@ -18,7 +18,7 @@
 
 The project demonstrates how to connect document ingestion, grounded question answering, safety checks, human-in-the-loop (HITL) review, operational auditing, and observability into one AI application. It also includes a deployment approach using **Docker, Amazon ECR, Amazon EC2, and GitHub Actions with a self-hosted runner**.
 
-> **Validation status:** Mocked upload regression tests and in-process HTTP smoke tests cover the web surface and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. Live AWS, Pinecone, PostgreSQL integration and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
+> **Validation status:** Extraction tests, mocked ingestion regressions, and in-process HTTP smoke tests cover document processing, the web surface, and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. Live AWS, Pinecone, PostgreSQL integration and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
 
 ## Key Features
 
@@ -369,7 +369,13 @@ Node.js is used only for the CI JavaScript syntax check, not by the application 
 Run tests in a clean checkout with no configured `.env` or service credentials.
 The suite mocks storage, embeddings, vectors, and database calls. It covers upload ownership,
 duplicate completion, failed-upload retry, template and static asset serving, liveness, and
-readiness success/failure. These checks do not establish live service connectivity or browser behavior.
+readiness success/failure. Extraction checks use in-memory UTF-8, DOCX, and blank PDF fixtures.
+Ingestion regressions cover declared and actual upload size limits, invalid PDF signatures,
+empty text, storage/extraction/embedding failures, and a partial vector write followed by retry
+with stable IDs, tenant scope, page metadata, and batches of at most 50 records. The blank PDF
+fixture verifies page numbering and empty extraction, not OCR or text-bearing PDF accuracy.
+These checks do not establish live service connectivity, database transaction behavior,
+Pinecone deduplication, or browser behavior.
 
 ### Manual integration scenarios
 
