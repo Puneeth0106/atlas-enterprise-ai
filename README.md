@@ -18,7 +18,7 @@
 
 The project demonstrates how to connect document ingestion, grounded question answering, safety checks, human-in-the-loop (HITL) review, operational auditing, and observability into one AI application. It also includes a deployment approach using **Docker, Amazon ECR, Amazon EC2, and GitHub Actions with a self-hosted runner**.
 
-> **Validation status:** This imported implementation has not yet been run in this repository. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
+> **Validation status:** Mocked upload regression tests and in-process HTTP smoke tests cover the web surface and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. Live AWS, Pinecone, PostgreSQL integration and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
 
 ## Key Features
 
@@ -33,7 +33,7 @@ The project demonstrates how to connect document ingestion, grounded question an
 | Audit and feedback | Store relevant application events and user feedback in PostgreSQL. |
 | Observability | Optional GlassFlow Rius instrumentation for supported execution traces and diagnostics. |
 | Web dashboard | Document upload, chat, history, approvals, and operational views in a lightweight UI. |
-| Automated delivery | Build and publish versioned Docker images to ECR and deploy to EC2 through GitHub Actions. |
+| Continuous integration | Check dependencies, Python and JavaScript syntax, mocked uploads, and HTTP responses through GitHub Actions. |
 
 ## Technology Stack
 
@@ -98,7 +98,7 @@ flowchart LR
     DOCKER --> SERVICES[Bedrock · S3 · Pinecone · PostgreSQL · Rius]
 ```
 
-**Deployment flow:** A commit to `main` triggers GitHub Actions. The CI job runs configured checks; the delivery job builds and pushes an image tagged with the Git commit SHA to ECR. The deployment job runs on the trusted EC2 self-hosted runner, pulls that image, and replaces the application container. The instance needs outbound access to the external services.
+**Planned deployment flow:** Once an AWS delivery workflow is added, a commit to `main` would trigger delivery through GitHub Actions. In that pattern, the CI job runs configured checks; the delivery job builds and pushes an image tagged with the Git commit SHA to ECR. The deployment job runs on the trusted EC2 self-hosted runner, pulls that image, and replaces the application container. The instance needs outbound access to the external services.
 
 ## Repository Structure
 
@@ -123,14 +123,14 @@ flowchart LR
 │   └── schema.sql              # Database schema
 ├── scripts/
 │   └── init_db.py              # Database initialization
-├── docs/                       # Setup and operational notes
+├── tests/                      # Mocked regressions and HTTP smoke tests
 ├── requirements.txt
 ├── Dockerfile
 ├── .env.example
-└── .github/workflows/         # GitHub Actions pipelines
+└── .github/workflows/ci.yml   # Credential-free pull request and main checks
 ```
 
-> Repository layout reflects the project modules discussed here; keep this section aligned with the files in your actual GitHub repository. The CI/CD workflow must be added if it is not yet committed.
+> The committed workflow runs CI only. The documented AWS delivery architecture is a proposed deployment pattern; no deployment workflow is committed.
 
 ## Prerequisites
 
@@ -264,6 +264,8 @@ On Linux, if using an AWS profile instead of environment credentials, provide cr
 
 ## CI/CD Deployment to AWS
 
+The current `ci.yml` workflow runs on pull requests, pushes to `main`, and manual dispatch. It uses GitHub-hosted runners and needs no service credentials. AWS delivery is not enabled; the following sections describe future setup.
+
 This repository's intended deployment pattern uses **GitHub Actions + Amazon ECR + an EC2 self-hosted runner + Docker**.
 
 ### AWS resources
@@ -352,6 +354,25 @@ Endpoints may differ if your local project has been modified. The reference appl
 
 ## Testing and Demo Scenarios
 
+### Automated checks
+
+From the repository root after installing `requirements.txt`:
+
+```bash
+python -m pip check
+python -m compileall -q app worker scripts tests
+node --check app/static/js/app.js
+AWS_EC2_METADATA_DISABLED=true RIUS_DISABLED=true python -m unittest discover -s tests -v
+```
+
+Node.js is used only for the CI JavaScript syntax check, not by the application runtime.
+Run tests in a clean checkout with no configured `.env` or service credentials.
+The suite mocks storage, embeddings, vectors, and database calls. It covers upload ownership,
+duplicate completion, failed-upload retry, template and static asset serving, liveness, and
+readiness success/failure. These checks do not establish live service connectivity or browser behavior.
+
+### Manual integration scenarios
+
 | Area | Example prompt | Expected result |
 | --- | --- | --- |
 | Retrieval | “What is NovaCore's annual leave policy?” | Grounded answer based on indexed handbook |
@@ -371,7 +392,7 @@ This project intentionally prioritizes understandable implementation over produc
 - Add HTTPS, an appropriate ingress/reverse proxy, rate limiting, and restricted security groups.
 - Use IAM roles and a managed secret store; never commit secrets or expose credentials in logs.
 - Isolate and protect the self-hosted runner; Docker access is effectively privileged host access.
-- Add actual automated tests, dependency/image scanning, health-gated deployment, rollback, and monitoring.
+- Expand automated integration coverage; add dependency/image scanning, health-gated deployment, rollback, and monitoring.
 - Move long-running document ingestion to a durable background job system.
 - Treat retrieved document text as untrusted input and test prompt-injection resistance.
 - Review retention, audit privacy, and whether observability tools capture sensitive content.
@@ -405,7 +426,7 @@ Keep the documentation links aligned with the files included in your repository.
 
 ## Project Scope
 
-The project does **not** require Node.js, Kubernetes, Terraform, Amazon SQS, AWS RDS, or an MCP server. The reference application uses a demonstration principal rather than real authentication. HITL approval is a decision-recording workflow, not an automated action executor.
+The application runtime does **not** require Node.js, Kubernetes, Terraform, Amazon SQS, AWS RDS, or an MCP server. CI uses Node.js for JavaScript syntax checking. The reference application uses a demonstration principal rather than real authentication. HITL approval is a decision-recording workflow, not an automated action executor.
 
 ## Contributing
 
@@ -413,7 +434,7 @@ Issues and pull requests are welcome where enabled. For substantial changes, des
 
 ## License
 
-**License not yet specified.** Add a `LICENSE` file and update this section if you intend to release the repository under an open-source license.
+Licensed under [Apache License 2.0](LICENSE). See [SOURCE.md](SOURCE.md) for the Krish Naik Academy source and import record.
 
 ---
 
