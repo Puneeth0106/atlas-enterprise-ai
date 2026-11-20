@@ -253,7 +253,21 @@ Build the image:
 docker build -t atlas-enterprise-ai:local .
 ```
 
-Run it locally:
+Run a credential-free container smoke check (requires Docker and host Python 3):
+
+```bash
+docker run -d --name atlas-smoke -p 127.0.0.1:8000:8000 \
+  -e AWS_EC2_METADATA_DISABLED=true -e RIUS_DISABLED=true atlas-enterprise-ai:local
+python3 scripts/smoke_http.py http://127.0.0.1:8000
+docker rm -f atlas-smoke
+```
+
+The smoke check waits up to 60 seconds for liveness, checks the home page and browser
+assets, and expects readiness to return 503 because no database is configured.
+Use an unused port if 8000 is occupied. Remove the smoke container even if the check fails.
+The Docker build context includes only application inputs and excludes environment files.
+
+Run it locally with service configuration:
 
 ```bash
 docker run --rm --name atlas-enterprise-ai \
@@ -264,7 +278,7 @@ On Linux, if using an AWS profile instead of environment credentials, provide cr
 
 ## CI/CD Deployment to AWS
 
-The current `ci.yml` workflow runs on pull requests, pushes to `main`, and manual dispatch. It uses GitHub-hosted runners and needs no service credentials. AWS delivery is not enabled; the following sections describe future setup.
+The current `ci.yml` workflow runs on pull requests, pushes to `main`, and manual dispatch. It uses GitHub-hosted runners and needs no service credentials. A separate container job builds the image, verifies UID 10001 and the packaged worker, checks HTTP startup without service credentials, and removes the container. AWS delivery is not enabled; the following sections describe future setup.
 
 This repository's intended deployment pattern uses **GitHub Actions + Amazon ECR + an EC2 self-hosted runner + Docker**.
 
