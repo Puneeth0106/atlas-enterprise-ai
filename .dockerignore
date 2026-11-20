@@ -1,0 +1,12 @@
+# Send only image inputs to the Docker builder.
+**
+!Dockerfile
+!requirements.txt
+!app/
+!app/**
+!worker/
+!worker/**
+**/.env
+**/.env.*
+**/__pycache__
+**/*.pyc

@@ -46,3 +46,32 @@ jobs:
         run: node --check app/static/js/app.js
       - name: Run mocked regression and HTTP smoke tests
         run: python -m unittest discover -s tests -v
+
+  container:
+    name: Container smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build application image
+        run: docker build --tag atlas-smoke:ci .
+      - name: Start image without service credentials
+        run: |
+          docker run --detach --name atlas-smoke \
+            --env AWS_EC2_METADATA_DISABLED=true \
+            --env RIUS_DISABLED=true \
+            --publish 127.0.0.1:8000:8000 atlas-smoke:ci
+      - name: Verify runtime user and packaged files
+        run: |
+          test "$(docker exec atlas-smoke id -u)" = "10001"
+          docker exec atlas-smoke python -c "from pathlib import Path; from worker.ingest import process_s3_key; assert not list(Path('/srv').rglob('.env*'))"
+      - name: Check container HTTP surface
+        run: python3 scripts/smoke_http.py http://127.0.0.1:8000
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs atlas-smoke
+      - name: Remove smoke container
+        if: always()
+        run: docker rm --force atlas-smoke
