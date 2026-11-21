@@ -18,7 +18,7 @@
 
 The project demonstrates how to connect document ingestion, grounded question answering, safety checks, human-in-the-loop (HITL) review, operational auditing, and observability into one AI application. It also includes a deployment approach using **Docker, Amazon ECR, Amazon EC2, and GitHub Actions with a self-hosted runner**.
 
-> **Validation status:** Extraction tests, mocked ingestion regressions, and in-process HTTP smoke tests cover document processing, the web surface, and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. Live AWS, Pinecone, PostgreSQL integration and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
+> **Validation status:** Extraction tests, mocked ingestion regressions, and in-process HTTP smoke tests cover document processing, the web surface, and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. A separate PostgreSQL CI service tests ingestion transactions and concurrent claims with cloud calls mocked. Live AWS, Pinecone, hosted PostgreSQL and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
 
 ## Key Features
 
@@ -388,8 +388,30 @@ Ingestion regressions cover declared and actual upload size limits, invalid PDF 
 empty text, storage/extraction/embedding failures, and a partial vector write followed by retry
 with stable IDs, tenant scope, page metadata, and batches of at most 50 records. The blank PDF
 fixture verifies page numbering and empty extraction, not OCR or text-bearing PDF accuracy.
-These checks do not establish live service connectivity, database transaction behavior,
-Pinecone deduplication, or browser behavior.
+These checks do not establish live service connectivity, Pinecone deduplication, or browser behavior.
+
+### PostgreSQL transaction checks
+
+The separate CI job starts a disposable PostgreSQL 16 service and runs six integration tests.
+They use the actual schema, connection context manager, audit inserts, and ingestion SQL.
+Coverage includes commit/rollback, atomic ready status and audit writes, failure/retry,
+duplicate completion, and a concurrent request observing the committed processing claim.
+Storage, embeddings, and vector writes remain mocked.
+
+To reproduce against a disposable local PostgreSQL database:
+
+```bash
+ATLAS_TEST_DATABASE_URL=postgresql://localhost/atlas_test \
+  AWS_EC2_METADATA_DISABLED=true RIUS_DISABLED=true \
+  python -m unittest discover -s tests/integration -v
+```
+
+Use a test database whose role can create schemas and the `pgcrypto` extension. The suite
+requires `ATLAS_TEST_DATABASE_URL` explicitly and never falls back to `DATABASE_URL` or `.env`.
+It creates a random schema, removes that schema on completion, and truncates only its test
+tables between cases. Run it from a clean checkout without configured cloud credentials.
+These tests do not verify Render/Aurora connectivity, crash recovery of stuck processing
+claims, or atomic transactions across PostgreSQL and Pinecone.
 
 ### Manual integration scenarios
 
