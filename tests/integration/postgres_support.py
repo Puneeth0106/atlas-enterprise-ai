@@ -35,4 +35,3 @@ class PostgresCase(unittest.TestCase):
     def drop_schema(cls):
         with psycopg.connect(cls.base_url, autocommit=True) as conn:
             conn.execute(sql.SQL('DROP SCHEMA {} CASCADE').format(sql.Identifier(cls.schema)))
-
