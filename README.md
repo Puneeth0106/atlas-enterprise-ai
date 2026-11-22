@@ -18,7 +18,7 @@
 
 The project demonstrates how to connect document ingestion, grounded question answering, safety checks, human-in-the-loop (HITL) review, operational auditing, and observability into one AI application. It also includes a deployment approach using **Docker, Amazon ECR, Amazon EC2, and GitHub Actions with a self-hosted runner**.
 
-> **Validation status:** Extraction tests, mocked ingestion regressions, and in-process HTTP smoke tests cover document processing, the web surface, and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. A separate PostgreSQL CI service tests ingestion transactions and concurrent claims with cloud calls mocked. Live AWS, Pinecone, hosted PostgreSQL and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
+> **Validation status:** Extraction tests, mocked ingestion regressions, and in-process HTTP smoke tests cover document processing, the web surface, and readiness responses. GitHub Actions runs these checks on Python 3.11 and 3.12. A separate PostgreSQL CI service tests ingestion transactions, concurrent claims, tenant-scoped API queries, and conversation memory with cloud calls mocked. Live AWS, Pinecone, hosted PostgreSQL and deployment remain unverified. The demo identity context is not a real authentication or authorization system, approval decisions do not automatically execute destructive operations, and production-grade availability and rollback controls require additional work.
 
 ## Key Features
 
@@ -392,11 +392,16 @@ These checks do not establish live service connectivity, Pinecone deduplication,
 
 ### PostgreSQL transaction checks
 
-The separate CI job starts a disposable PostgreSQL 16 service and runs six integration tests.
+The separate CI job starts a disposable PostgreSQL 16 service and runs 14 integration tests.
 They use the actual schema, connection context manager, audit inserts, and ingestion SQL.
 Coverage includes commit/rollback, atomic ready status and audit writes, failure/retry,
 duplicate completion, and a concurrent request observing the committed processing claim.
-Storage, embeddings, and vector writes remain mocked.
+Eight API and memory checks additionally cover document visibility by tenant and group/owner,
+owner-only upload completion, conversation isolation when tenants share a conversation UUID,
+recent history ordering and limits, atomic turn inserts, and chat history/persistence through HTTP.
+Both suites share the disposable-schema fixture. Storage, embeddings, vector writes, and chat
+model orchestration remain mocked. HTTP tests inject demo principals; they verify SQL scoping,
+not authentication or user-level conversation privacy within one tenant.
 
 To reproduce against a disposable local PostgreSQL database:
 

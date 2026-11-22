@@ -108,5 +108,5 @@ jobs:
           cache: pip
       - name: Install application dependencies
         run: python -m pip install -r requirements.txt
-      - name: Verify real database transactions and ingestion claims
+      - name: Verify database transactions, tenant queries, and conversation memory
         run: python -m unittest discover -s tests/integration -v
